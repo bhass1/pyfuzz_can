@@ -96,7 +96,7 @@ def main():
 
 	#get args
         try:
-                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:O:h', ['canid=', 'data=', 'rate=', 'priority=','pgn=','source=','offline=','help'])
+                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:Oh', ['canid=', 'data=', 'rate=', 'priority=','pgn=','source=','offline','help'])
         except getopt.GetoptError:
                 usage()
                 sys.exit(2)
@@ -127,41 +127,51 @@ def main():
 	if(data != ""):
 		if(len(data) != 16):
 			usage()
+			print("\nBAD DATA LENGTH")
 			sys.exit(2)
-		if(not all(elt in data for elt in data_chars)):
+		if(not all(elt in data_chars for elt in data)):
 			usage()
+			print("\nINVALID DATA CHARACTERS")
 			sys.exit(2)
 	if(canid != "" and (pgn != "" or prio != "" or source != "")):
 		usage()
-		print("Please only provide either -c or [-P, -p, and -s]")
+		print("\nPlease only provide either -c or [-P, -p, and -s]")
 		sys.exit(2)
 	if(canid != ""):
 		if(len(canid) != 8):
 			usage()
+			print("\nBAD CAN ID LENGTH")
 			sys.exit(2)
-		if(not all(elt in canid for elt in hex_chars)):
+		if(not all(elt in hex_chars for elt in canid)):
 			usage()
+			print("\nINVALID CANID CHARACTERS")
 			sys.exit(2)
 	if(pgn != ""):
 		if(len(pgn) != 4):
 			usage()
+			print("\nBAD PGN LENGTH")
 			sys.exit(2)
-		if(not all(elt in pgn for elt in hex_chars)):
+		if(not all(elt in hex_chars for elt in pgn)):
 			usage()
+			print("\nINVALID PGN CHARACTERS")
 			sys.exit(2)
 	if(prio != ""):
 		if(len(prio) != 2):
 			usage()
+			print("\nBAD PRIORITY LENGTH")
 			sys.exit(2)
-		if(not all(elt in prio for elt in hex_chars)):
+		if(not all(elt in hex_chars for elt in prio)):
 			usage()
+			print("\nINVALID PRIORITY CHARACTERS")
 			sys.exit(2)
 	if(source != ""):
 		if(len(source) != 2):
 			usage()
+			print("\nBAD SOURCE LENGTH")
 			sys.exit(2)
-		if(not all(elt in source for elt in hex_chars)):
+		if(not all(elt in hex_chars for elt in source)):
 			usage()
+			print("\nINVALID SOURCE CHARACTERS")
 			sys.exit(2)
 	if(rate != 100):
 		try:
@@ -180,17 +190,16 @@ def main():
 
 
 	if(canid == ""):
-		print("Single empty canid")
 		#use prio
 		canid = makeCanId(prio, pgn, source)
 	
 	if(canid == ""):
 		print("Double empty canid")
 	else:
-		print("Not dbl empty : {}".format(canid))
+		print("canid: {}".format(canid))
 
 	print("data: {}".format(data))
-	print("rate {}".format(rate))
+	print("rate: {}".format(rate))
         fuzzID(data != "", canid != "", canid, data, rate)
 
 if __name__ == "__main__":
