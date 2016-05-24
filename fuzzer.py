@@ -11,24 +11,24 @@ import pdb
 
 def usage():
 	print("Used to fuzz CAN data frames. A typical usage is to try random data bytes")
-	print("for a given PGN and source address. You may give entire CAN ID or ")
-	print("priority, PGN, and source address, specify the transmission rate, and ")
-	print("use templated data bytes to provide knwn data and random data.")
-	print("up to 8 data bytes, 8-bit source addr, transmission period,")
-	print("and priority.")
+	print("for a given PGN and source address at a given rate.")
 	print("")
-	print("fuzzer.py -p PGN -s SA -r 100")
+	print("fuzzer.py -p PGN -s SA -r RATE")
 	print("")
-	print("fuzzer.py -c 29bit_CANID -s SA -r 100 -d 01xxxxxxxxffffff")
+	print("You may give an entire 29-bit CAN ID and use templated data bytes to ")
+	print("provide a mix of known data and random data.")
+	print("")
+	print("fuzzer.py -r RATE -c 29bit_CANID -d DATA")
 	print("")
 	print("FLAGS")
-	print("-P priority in hex.(ex. 18)") 
-	print("-p PGN in hex. (ex. fee1)") 
-	print("-s source address in hex. (ex. 00)") 
-	print("-d Eight data bytes in hex. A single byte is two hex chars.")
-	print("   Use xx for random byte. (ex. 1122334455667788 or xx22xxxx556677xx)")
-	print("-r rate of the fuzzing packets in decimal ms in set {1, infinity}.(ex. 100)")
-	print("-c whole 29-bit CAN ID in hex. (ex. 18ef1200)")
+	print("-P, --priority priority in hex.(ex. 18)") 
+	print("-p, --pgn PGN in hex. (ex. fee1)") 
+	print("-s, --source source address in hex. (ex. 00)") 
+	print("-d, --data Eight data bytes in hex. A single byte is two hex chars.")
+	print("   	  Use xx for random byte. (ex. 1122334455667788 or xx22xxxx556677xx)")
+	print("-r, --rate rate of the fuzzing packets in decimal ms in set {1, infinity}.(ex. 100)")
+	print("-c, --canid whole 29-bit CAN ID in hex. (ex. 18ef1200)")
+	print("-O, --offline used to flag that the PEAK tool is not connected")
 
 
 """
@@ -41,7 +41,7 @@ data_str: string with data to send, eg. "0,25,0,1,3,1,4,3",
 rate: integer number of ms to wait between sending
 """
 def fuzzID(hasData, hasId, can_str, data_str, rate):
-        global theBus
+        global theBus, offline
 	data_lst = [0, 0, 0, 0, 0, 0, 0, 0]
         can_id = 0x000000
 
@@ -67,8 +67,9 @@ def fuzzID(hasData, hasId, can_str, data_str, rate):
 
                 for i in range(0, 20):
                         try:
-                                theBus.send(msg)
-                                print("Message sent on {} for message {} with data {}".format(theBus.channel_info, can_id, data_lst))
+                                if(not offline): theBus.send(msg)
+                                if(not offline): print("Message sent on {} for message {} with data {}".format(theBus.channel_info, can_id, data_lst))
+				else: print("Generated message: {} with data {}".format(theBus.channel_info, can_id, data_lst))
                         except can.CanError:
                                 print("Message NOT sent")
                         time.sleep(rate / 1000)
@@ -83,8 +84,9 @@ def makeCanId(prio, pgn, source):
 
 
 def main():
-	global theBus
+	global theBus, offline
 
+	offline = False
         data = ""
         canid = ""
 	prio = ""
@@ -94,7 +96,7 @@ def main():
 
 	#get args
         try:
-                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:h', ['canid=', 'data=', 'amt=', 'help'])
+                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:O:h', ['canid=', 'data=', 'rate=', 'priority=','pgn=','source=','offline=','help'])
         except getopt.GetoptError:
                 usage()
                 sys.exit(2)
@@ -114,6 +116,8 @@ def main():
 			rate = arg
                 elif opt in ('-c', '--canid'):
                         canid = arg
+                elif opt in ('-O', '--offline'):
+                        offline = True
                 else:
                         usage()
                         sys.exit(2)
@@ -127,7 +131,7 @@ def main():
 		if(not all(elt in data for elt in data_chars)):
 			usage()
 			sys.exit(2)
-	if(canid != "" and (pgn != "" or prio != "" or source != ""):
+	if(canid != "" and (pgn != "" or prio != "" or source != "")):
 		usage()
 		print("Please only provide either -c or [-P, -p, and -s]")
 		sys.exit(2)
@@ -172,7 +176,7 @@ def main():
 			print("Did you really want > 1s period? Rate set to {}".format(rate))
 
 	#good to go
-	theBus = can.interface.Bus()
+	if(not offline): theBus = can.interface.Bus()
 
 
 	if(canid == ""):
