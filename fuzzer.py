@@ -67,14 +67,16 @@ def fuzzID(can_str, data_str, rate):
 		if not offline:
                 	try:
                 		theBus.send(msg)
-				print("{} : 0x{}        {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), seccan_id, data_lst))
+				print("{} : 0x{}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
+					hex(data_lst[0]), hex(data_lst[1]), hex(data_lst[2]), hex(data_lst[3]), hex(data_lst[4]), hex(data_lst[5]), hex(data_lst[6]), hex(data_lst[7])))
                 	except can.CanError:
                 		print("Message NOT sent")
                 		time.sleep(5000)
 		else:
-			print("{} : 0x{}        {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), can_id, data_lst))
-
-               	time.sleep(rate / 1000)
+			print("{} : 0x{}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
+				hex(data_lst[0]), hex(data_lst[1]), hex(data_lst[2]), hex(data_lst[3]), hex(data_lst[4]), hex(data_lst[5]), hex(data_lst[6]), hex(data_lst[7])))
+		sys.stdout.flush()
+		time.sleep(rate / float(1000))
 
 """
 Assumes prio, pgn, and source are properly formatted hex strings
