@@ -6,6 +6,8 @@ import binascii
 import os, random
 import time
 import pdb
+import string
+from datetime import datetime
 
 
 
@@ -34,52 +36,57 @@ def usage():
 """
 Fuzzes either id, data, or both
 
-hasData: when true sends out random CAN ids with given data
-hasId: when true sends out random data with given id
-can_str: string with id to send, id must be in decimal form
-data_str: string with data to send, eg. "0,25,0,1,3,1,4,3",
+can_str: string with id to send in hex with 'x' to represent random char
+data_str: formatted data string in hex with 'x' to represent random char
 rate: integer number of ms to wait between sending
 """
-def fuzzID(hasData, hasId, can_str, data_str, rate):
+def fuzzID(can_str, data_str, rate):
         global theBus, offline
 	data_lst = [0, 0, 0, 0, 0, 0, 0, 0]
         can_id = 0x000000
+	can_template = can_str
+	data_template = data_str
+	while(True):
+		can_str = can_template
+		data_str = data_template
+        	while 'x' in can_str:
+			can_str = can_str.replace('x', random.choice(string.hexdigits), 1) #Replace x with random hex char
 
-        if data_str != " ":
-                count = 0
-                for element in data_str.split(","):
-                        #data_lst[count](hex(int(element)))
-                        data_lst[count] = hex(int(element))
-                        count+=1
+		while 'x' in data_str:
+			data_str = data_str.replace('x', random.choice(string.hexdigits), 1)#Replace x with random hex char
 
-        if can_str != " ":
-                can_id = hex(int(can_str))
+		try:
+			can_id = int(can_str, 16)
+			for i in range(8):
+				data_lst[i] = int(data_str[i*2]+data_str[i*2+1], 16)
+		except:
+			print("can_str {} and data_str {} \ncan_id {} and data {}\nEXCEPTION THROWN".format(can_str, data_str, can_id, data_lst))
+			sys.exit(2)
 
-        pdb.set_trace()
+                msg = can.Message(arbitration_id=can_id, data=data_lst, extended_id=True)
+		if not offline:
+                	try:
+                		theBus.send(msg)
+				print("{} : 0x{}        {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), seccan_id, data_lst))
+                	except can.CanError:
+                		print("Message NOT sent")
+                		time.sleep(5000)
+		else:
+			print("{} : 0x{}        {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), can_id, data_lst))
 
-        #for i in range(0, amt):
-	while(true):
-                if hasData:
-                        can_id = binascii.b2a_hex(os.urandom(3))
-                if hasId:
-                        for i in range(0, 8):
-                                msg = can.Message(arbitration_id=can_id, data=data_list, extended_id=False)
-
-                for i in range(0, 20):
-                        try:
-                                if(not offline): theBus.send(msg)
-                                if(not offline): print("Message sent on {} for message {} with data {}".format(theBus.channel_info, can_id, data_lst))
-				else: print("Generated message: {} with data {}".format(theBus.channel_info, can_id, data_lst))
-                        except can.CanError:
-                                print("Message NOT sent")
-                        time.sleep(rate / 1000)
-                time.sleep(0.3)
+               	time.sleep(rate / 1000)
 
 """
 Assumes prio, pgn, and source are properly formatted hex strings
 Returns CAN ID string
 """
 def makeCanId(prio, pgn, source):
+	if(prio == ""):
+		prio = "18"
+	if(pgn == ""):
+		pgn = "xxxx"
+	if(source == ""):
+		source = "xx"
 	return prio + pgn + source
 
 
@@ -142,7 +149,7 @@ def main():
 			usage()
 			print("\nBAD CAN ID LENGTH")
 			sys.exit(2)
-		if(not all(elt in hex_chars for elt in canid)):
+		if(not all(elt in data_chars for elt in canid)):
 			usage()
 			print("\nINVALID CANID CHARACTERS")
 			sys.exit(2)
@@ -151,7 +158,7 @@ def main():
 			usage()
 			print("\nBAD PGN LENGTH")
 			sys.exit(2)
-		if(not all(elt in hex_chars for elt in pgn)):
+		if(not all(elt in data_chars for elt in pgn)):
 			usage()
 			print("\nINVALID PGN CHARACTERS")
 			sys.exit(2)
@@ -160,7 +167,7 @@ def main():
 			usage()
 			print("\nBAD PRIORITY LENGTH")
 			sys.exit(2)
-		if(not all(elt in hex_chars for elt in prio)):
+		if(not all(elt in data_chars for elt in prio)):
 			usage()
 			print("\nINVALID PRIORITY CHARACTERS")
 			sys.exit(2)
@@ -169,7 +176,7 @@ def main():
 			usage()
 			print("\nBAD SOURCE LENGTH")
 			sys.exit(2)
-		if(not all(elt in hex_chars for elt in source)):
+		if(not all(elt in data_chars for elt in source)):
 			usage()
 			print("\nINVALID SOURCE CHARACTERS")
 			sys.exit(2)
@@ -194,13 +201,19 @@ def main():
 		canid = makeCanId(prio, pgn, source)
 	
 	if(canid == ""):
-		print("Double empty canid")
-	else:
-		print("canid: {}".format(canid))
+		print("Must provide a canid or pgn")
+		sys.exit(2)
 
+	if(data == ""):
+		data = "xxxxxxxxxxxxxxxx"
+
+	canid = canid.replace('X', 'x')
+	data = data.replace('X', 'x')
+
+	print("canid: {}".format(canid))
 	print("data: {}".format(data))
 	print("rate: {}".format(rate))
-        fuzzID(data != "", canid != "", canid, data, rate)
+        fuzzID(canid, data, rate)
 
 if __name__ == "__main__":
 	main()
