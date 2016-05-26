@@ -46,15 +46,38 @@ def fuzzID(can_str, data_str, rate):
         can_id = 0x000000
 	can_template = can_str
 	data_template = data_str
+	hex_chars = "0123456789abcdef" #ignore capitals so we don't have twice as many letters to randomly choose
+
+	checksum = 0
+	counter = 0
+
 	while(True):
 		can_str = can_template
 		data_str = data_template
         	while 'x' in can_str:
-			can_str = can_str.replace('x', random.choice(string.hexdigits), 1) #Replace x with random hex char
+			can_str = can_str.replace('x', random.choice(hex_chars), 1) #Replace x with random hex char
 
 		while 'x' in data_str:
-			data_str = data_str.replace('x', random.choice(string.hexdigits), 1)#Replace x with random hex char
+			data_str = data_str.replace('x', random.choice(hex_chars), 1)#Replace x with random hex char
 
+		if '+' in data_str:
+			#This is checksum field
+			print("Hi +")
+			sys.exit(2)
+
+		if '#' in data_str:
+			#This is counter field
+			count_count = data_str.count('#')
+			start_pos = data_str.find('#')	
+			for i in range(count_count - 1):
+				if data_str[i+start_pos+1] != '#':
+					print("Poor counter formatting. Only one field of consecutive # is allowed")
+					sys.exit(2)
+			cnt_str = "{0:0{1}x}".format(counter, count_count)
+			for i in range(count_count):
+				data_str = data_str.replace('#', cnt_str[i], 1)
+			counter = (counter + 1) % 8
+			
 		try:
 			can_id = int(can_str, 16)
 			for i in range(8):
@@ -131,12 +154,11 @@ def main():
                         usage()
                         sys.exit(2)
 	#check args
-	data_chars = "0123456789abcdefABCDEFxX"
-	hex_chars = "0123456789abcdefABCDEF"
+	data_chars = "0123456789abcdefABCDEFxX#+"
 	if(data != ""):
 		if(len(data) != 16):
 			usage()
-			print("\nBAD DATA LENGTH")
+			print("\nBAD DATA LENGTH {}".format(len(data)))
 			sys.exit(2)
 		if(not all(elt in data_chars for elt in data)):
 			usage()
