@@ -1,15 +1,16 @@
 #!/usr/bin/env python
+
+#### Copyright (c) 2016 Bill Hass {billhass@umich.edu}
+#### Refer to Liscense.txt
+
+
 import can
 import getopt
 import sys
-import binascii
 import os, random
 import time
-import pdb
 import string
 from datetime import datetime
-
-
 
 def usage():
 	print("Used to fuzz CAN data frames. A typical usage is to try random data bytes")
@@ -29,10 +30,12 @@ def usage():
 	print("-d, --data Eight data bytes in hex. A single byte is two hex chars.")
 	print("   	  Use x for random nibble. (ex. xx22xxxx556677xx)")
 	print("   	  Use # for counter nibble. (ex. 11223344556677##)")
+	print("   	  Only 1 counter allowed, and can be whole size of data.")
 	print("   	  Use + for checksum nibble. (ex. 11223344556677++)")
+	print("   	  Only 1 checksum allowed, and must be in final data byte.")
 	print("-r, --rate rate of the fuzzing packets in decimal ms in set {1, infinity}.(ex. 100)")
 	print("-c, --canid whole 29-bit CAN ID in hex. (ex. 18ef1200)")
-	print("-O, --offline used to flag that the PEAK tool is not connected")
+	print("-O, --offline used to flag that the CAN hardware is not connected")
 
 
 """
@@ -140,7 +143,7 @@ Returns CAN ID string
 """
 def makeCanId(prio, pgn, source):
 	if(prio == ""):
-		prio = "18"
+		prio = "08"
 	if(pgn == ""):
 		pgn = "xxxx"
 	if(source == ""):
