@@ -37,5 +37,9 @@ Setup:
 5. You are ready to fuzz. Try:
   ```
   $> cd pyfuzz_can
-  $> python fuzzer.py --help
+  $> python fuzzer.py
   ```
+
+For help use:
+
+`$> python fuzzer.py --help`
