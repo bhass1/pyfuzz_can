@@ -27,7 +27,9 @@ def usage():
 	print("-p, --pgn PGN in hex. (ex. fee1)") 
 	print("-s, --source source address in hex. (ex. 00)") 
 	print("-d, --data Eight data bytes in hex. A single byte is two hex chars.")
-	print("   	  Use xx for random byte. (ex. 1122334455667788 or xx22xxxx556677xx)")
+	print("   	  Use x for random nibble. (ex. xx22xxxx556677xx)")
+	print("   	  Use # for counter nibble. (ex. 11223344556677##)")
+	print("   	  Use + for checksum nibble. (ex. 11223344556677++)")
 	print("-r, --rate rate of the fuzzing packets in decimal ms in set {1, infinity}.(ex. 100)")
 	print("-c, --canid whole 29-bit CAN ID in hex. (ex. 18ef1200)")
 	print("-O, --offline used to flag that the PEAK tool is not connected")
@@ -50,6 +52,7 @@ def fuzzID(can_str, data_str, rate):
 
 	checksum = 0
 	counter = 0
+	has_counter = False
 
 	while(True):
 		can_str = can_template
@@ -60,13 +63,9 @@ def fuzzID(can_str, data_str, rate):
 		while 'x' in data_str:
 			data_str = data_str.replace('x', random.choice(hex_chars), 1)#Replace x with random hex char
 
-		if '+' in data_str:
-			#This is checksum field
-			print("Hi +")
-			sys.exit(2)
-
 		if '#' in data_str:
 			#This is counter field
+			has_counter = True
 			count_count = data_str.count('#')
 			start_pos = data_str.find('#')	
 			for i in range(count_count - 1):
@@ -76,8 +75,42 @@ def fuzzID(can_str, data_str, rate):
 			cnt_str = "{0:0{1}x}".format(counter, count_count)
 			for i in range(count_count):
 				data_str = data_str.replace('#', cnt_str[i], 1)
-			counter = (counter + 1) % 8
+
+		#Do checksum calculation last because we need to know all the bits and bytes
+		if '+' in data_str:
+			#This is checksum field
+			count_check = data_str.count('+')
+			if count_check > 2:
+				print("Poor checksum formatting. A checksum greater than 1 byte is not allowed")
+				sys.exit(2)
+			start_pos = data_str.find('+')	
+			if start_pos < 14:
+				print("Poor checksum formatting. The checksum must be in the last data byte")
+				sys.exit(2)
+			for i in range(count_check - 1):
+				if data_str[i+start_pos+1] != '+':
+					print("Poor checksum formatting. Only one field of consecutive + is allowed")
+					sys.exit(2)
+			#checksum different depending on PGN
+			checksum = int(can_str[0:2],16) + int(can_str[2:4],16) + int(can_str[4:6],16) + int(can_str[6:8],16)
+			for i in range(7):
+				checksum += int(data_str[i*2:i*2+2],16)
+			checksum += counter
+			if can_str[2:6] == "0000":
+				checksum = (((checksum >> 6) & 0x3) + (checksum >> 0x3) + checksum) & 0x7
+			elif count_check == 2:
+				checksum = checksum & 0xff
+			else:
+				checksum = ((checksum >> 4) + checksum) & 0xf
+
+			chk_str = "{0:0{1}x}".format(checksum, count_check)
+			for i in range(count_check):
+				data_str = data_str.replace('+', chk_str[i], 1)
 			
+		#Increment counter after checksum calc
+		if has_counter:
+			counter = (counter + 1) % 8
+
 		try:
 			can_id = int(can_str, 16)
 			for i in range(8):
@@ -90,13 +123,13 @@ def fuzzID(can_str, data_str, rate):
 		if not offline:
                 	try:
                 		theBus.send(msg)
-				print("{} : 0x{}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
+				print("{} : {}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
 					hex(data_lst[0]), hex(data_lst[1]), hex(data_lst[2]), hex(data_lst[3]), hex(data_lst[4]), hex(data_lst[5]), hex(data_lst[6]), hex(data_lst[7])))
                 	except can.CanError:
                 		print("Message NOT sent")
                 		time.sleep(5000)
 		else:
-			print("{} : 0x{}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
+			print("{} : {}    {} {} {} {} {} {} {} {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), hex(can_id), 
 				hex(data_lst[0]), hex(data_lst[1]), hex(data_lst[2]), hex(data_lst[3]), hex(data_lst[4]), hex(data_lst[5]), hex(data_lst[6]), hex(data_lst[7])))
 		sys.stdout.flush()
 		time.sleep(rate / float(1000))
@@ -155,6 +188,7 @@ def main():
                         sys.exit(2)
 	#check args
 	data_chars = "0123456789abcdefABCDEFxX#+"
+	can_chars = "0123456789abcdefABCDEFxX"
 	if(data != ""):
 		if(len(data) != 16):
 			usage()
@@ -173,7 +207,7 @@ def main():
 			usage()
 			print("\nBAD CAN ID LENGTH")
 			sys.exit(2)
-		if(not all(elt in data_chars for elt in canid)):
+		if(not all(elt in can_chars for elt in canid)):
 			usage()
 			print("\nINVALID CANID CHARACTERS")
 			sys.exit(2)
@@ -182,7 +216,7 @@ def main():
 			usage()
 			print("\nBAD PGN LENGTH")
 			sys.exit(2)
-		if(not all(elt in data_chars for elt in pgn)):
+		if(not all(elt in can_chars for elt in pgn)):
 			usage()
 			print("\nINVALID PGN CHARACTERS")
 			sys.exit(2)
@@ -191,7 +225,7 @@ def main():
 			usage()
 			print("\nBAD PRIORITY LENGTH")
 			sys.exit(2)
-		if(not all(elt in data_chars for elt in prio)):
+		if(not all(elt in can_chars for elt in prio)):
 			usage()
 			print("\nINVALID PRIORITY CHARACTERS")
 			sys.exit(2)
@@ -200,7 +234,7 @@ def main():
 			usage()
 			print("\nBAD SOURCE LENGTH")
 			sys.exit(2)
-		if(not all(elt in data_chars for elt in source)):
+		if(not all(elt in can_chars for elt in source)):
 			usage()
 			print("\nINVALID SOURCE CHARACTERS")
 			sys.exit(2)
