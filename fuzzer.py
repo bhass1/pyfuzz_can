@@ -12,9 +12,27 @@ import time
 import string
 from datetime import datetime
 
+valid_baud_rates = [
+	1000000, 
+	800000,
+	500000,
+	250000,
+	125000,
+	100000,
+	95000,
+	83000,
+	50000,
+	47000,
+	33000,
+	20000,
+	10000,
+	5000
+]
+
 def usage():
-	print("Used to fuzz CAN data frames. A typical usage is to try random data bytes")
-	print("for a given PGN and source address at a given rate.")
+	print("Used to fuzz 29-bit CAN data frames (Particularly suited for J1939).")
+	print("A typical usage is to try random data bytes for a given PGN and source")
+	print("address at a given rate.")
 	print("")
 	print("fuzzer.py -p PGN -s SA -r RATE")
 	print("")
@@ -24,18 +42,19 @@ def usage():
 	print("fuzzer.py -r RATE -c 29bit_CANID -d DATA")
 	print("")
 	print("FLAGS")
-	print("-P, --priority priority in hex.(ex. 18)") 
+	print("-b, --baud Baud rate integer in bits/second. (ex. 250000)") 
+	print("-P, --priority Priority in hex. (ex. 18)") 
 	print("-p, --pgn PGN in hex. (ex. fee1)") 
-	print("-s, --source source address in hex. (ex. 00)") 
+	print("-s, --source Source address in hex. (ex. 00)") 
 	print("-d, --data Eight data bytes in hex. A single byte is two hex chars.")
 	print("   	  Use x for random nibble. (ex. xx22xxxx556677xx)")
 	print("   	  Use # for counter nibble. (ex. 11223344556677##)")
 	print("   	  Only 1 counter allowed, and can be whole size of data.")
 	print("   	  Use + for checksum nibble. (ex. 11223344556677++)")
 	print("   	  Only 1 checksum allowed, and must be in final data byte.")
-	print("-r, --rate rate of the fuzzing packets in decimal ms in set {1, infinity}.(ex. 100)")
-	print("-c, --canid whole 29-bit CAN ID in hex. (ex. 18ef1200)")
-	print("-O, --offline used to flag that the CAN hardware is not connected")
+	print("-r, --rate An integer period that packets will be sent in ms in set {1, infinity}. (ex. 100)")
+	print("-c, --canid Whole 29-bit CAN ID in hex. (ex. 18ef1200)")
+	print("-O, --offline Used to flag that the CAN hardware is not connected")
 
 
 """
@@ -142,11 +161,11 @@ Assumes prio, pgn, and source are properly formatted hex strings
 Returns CAN ID string
 """
 def makeCanId(prio, pgn, source):
-	if(prio == ""):
+	if prio == "" :
 		prio = "08"
-	if(pgn == ""):
+	if pgn == "" :
 		pgn = "xxxx"
-	if(source == ""):
+	if source == "" :
 		source = "xx"
 	return prio + pgn + source
 
@@ -154,17 +173,18 @@ def makeCanId(prio, pgn, source):
 def main():
 	global theBus, offline
 
-	offline = False
-        data = ""
-        canid = ""
 	prio = ""
 	pgn = ""
 	source = ""
+        data = ""
 	rate = 100
+        canid = ""
+	baud = 250000
+	offline = False
 
 	#get args
         try:
-                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:Oh', ['canid=', 'data=', 'rate=', 'priority=','pgn=','source=','offline','help'])
+                opts, args = getopt.getopt(sys.argv[1:], 'P:p:s:d:r:c:b:Oh', ['priority=','pgn=','source=','data=','rate=','canid=','baud=','offline','help'])
         except getopt.GetoptError:
                 usage()
                 sys.exit(2)
@@ -184,6 +204,8 @@ def main():
 			rate = arg
                 elif opt in ('-c', '--canid'):
                         canid = arg
+                elif opt in ('-b', '--baud'):
+                        baud = arg
                 elif opt in ('-O', '--offline'):
                         offline = True
                 else:
@@ -192,80 +214,89 @@ def main():
 	#check args
 	data_chars = "0123456789abcdefABCDEFxX#+"
 	can_chars = "0123456789abcdefABCDEFxX"
-	if(data != ""):
-		if(len(data) != 16):
+	if data != "" :
+		if len(data) != 16 :
 			usage()
 			print("\nBAD DATA LENGTH {}".format(len(data)))
 			sys.exit(2)
-		if(not all(elt in data_chars for elt in data)):
+		if not all(elt in data_chars for elt in data) :
 			usage()
 			print("\nINVALID DATA CHARACTERS")
 			sys.exit(2)
-	if(canid != "" and (pgn != "" or prio != "" or source != "")):
+	if canid != "" and (pgn != "" or prio != "" or source != "") :
 		usage()
 		print("\nPlease only provide either -c or [-P, -p, and -s]")
 		sys.exit(2)
-	if(canid != ""):
-		if(len(canid) != 8):
+	if canid != "" :
+		if len(canid) != 8 :
 			usage()
 			print("\nBAD CAN ID LENGTH")
 			sys.exit(2)
-		if(not all(elt in can_chars for elt in canid)):
+		if not all(elt in can_chars for elt in canid) :
 			usage()
 			print("\nINVALID CANID CHARACTERS")
 			sys.exit(2)
-	if(pgn != ""):
-		if(len(pgn) != 4):
+	if pgn != "" :
+		if len(pgn) != 4 :
 			usage()
 			print("\nBAD PGN LENGTH")
 			sys.exit(2)
-		if(not all(elt in can_chars for elt in pgn)):
+		if not all(elt in can_chars for elt in pgn) :
 			usage()
 			print("\nINVALID PGN CHARACTERS")
 			sys.exit(2)
-	if(prio != ""):
-		if(len(prio) != 2):
+	if prio != "" :
+		if len(prio) != 2 :
 			usage()
 			print("\nBAD PRIORITY LENGTH")
 			sys.exit(2)
-		if(not all(elt in can_chars for elt in prio)):
+		if not all(elt in can_chars for elt in prio) :
 			usage()
 			print("\nINVALID PRIORITY CHARACTERS")
 			sys.exit(2)
-	if(source != ""):
-		if(len(source) != 2):
+	if source != "" :
+		if len(source) != 2 :
 			usage()
 			print("\nBAD SOURCE LENGTH")
 			sys.exit(2)
-		if(not all(elt in can_chars for elt in source)):
+		if not all(elt in can_chars for elt in source) :
 			usage()
 			print("\nINVALID SOURCE CHARACTERS")
 			sys.exit(2)
-	if(rate != 100):
+	if rate != 100 :
 		try:
 			rate = int(rate)
 		except:
 			usage()
 			sys.exit(2)
-		if(rate < 1):
+		if rate < 1 :
 			usage()
 			sys.exit(2)
-		if(rate > 1000):
+		if rate > 1000 :
 			print("Did you really want > 1s period? Rate set to {}".format(rate))
+	if baud != 250000 :
+		try:
+			baud = int(baud)
+		except:
+			usage()
+			sys.exit(2)
+		if baud not in valid_baud_rates :
+			usage()
+			sys.exit(2)
 
 	#good to go
-	if(not offline): theBus = can.interface.Bus()
+	if not offline : theBus = can.interface.Bus(bitrate=baud)
 
 
-	if(canid == ""):
+	if canid == "" :
 		#use prio
 		canid = makeCanId(prio, pgn, source)
 	
-	if(canid == ""):
+	if canid == "" :
 		print("Must provide a canid or pgn")
 		sys.exit(2)
 
-	if(data == ""):
+	if data == "" :
 		data = "xxxxxxxxxxxxxxxx"
 
 	canid = canid.replace('X', 'x')
