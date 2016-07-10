@@ -49,7 +49,7 @@ def usage():
 	print("-d, --data Eight data bytes in hex. A single byte is two hex chars.")
 	print("   	  Use x for random nibble. (ex. xx22xxxx556677xx)")
 	print("   	  Use # for counter nibble. (ex. 11223344556677##)")
-	print("   	  Only 1 counter allowed, and can be whole size of data.")
+	print("   	  Only 1 counter allowed, and can be whole size of data, but limited to mod 8 for now.")
 	print("   	  Use + for checksum nibble. (ex. 11223344556677++)")
 	print("   	  Only 1 checksum allowed, and must be in final data byte.")
 	print("-r, --rate An integer period that packets will be sent in ms in set {1, infinity}. (ex. 100)")
@@ -131,7 +131,7 @@ def fuzzID(can_str, data_str, rate):
 			
 		#Increment counter after checksum calc
 		if has_counter:
-			counter = (counter + 1) % 8
+			counter = (counter + 1) % 8 #TODO : Only mod 8 for specific PGNs or user-specified modulus
 
 		try:
 			can_id = int(can_str, 16)
