@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2016 Bill Hass {billhass@umich.edu}
+Copyright (c) 2016 Bill Hass {billhass@umich.edu}, Yelizaveta Burakova {ybura@umich.edu}
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

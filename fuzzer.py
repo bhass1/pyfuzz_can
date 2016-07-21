@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#### Copyright (c) 2016 Bill Hass {billhass@umich.edu}
+#### Copyright (c) 2016 Bill Hass {billhass@umich.edu}, Yelizaveta Burakova {ybura@umich.edu}
 #### Refer to Liscense.txt
 
 
