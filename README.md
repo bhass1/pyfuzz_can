@@ -28,7 +28,7 @@ Setup:
   interface = pcan
   channel = PCAN_USBBUS1
   ```
-  The interface and channel given are for PEAK PCAN-USB. These will change depending on your CAN interface.
+  The interface and channel given are for PEAK PCAN-USB. These will change depending on your CAN interface. Refer to the Python-CAN documentation for your device's configuration : http://python-can.readthedocs.io/en/latest/configuration.html.
   
 4. Clone pyfuzz_can to your local machine:
 
