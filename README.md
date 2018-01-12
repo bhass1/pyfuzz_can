@@ -56,7 +56,9 @@
 ### Common Issues
 **1. Cannot open a required shared object file. (e.g. `OSError: libpcanbasic.so: cannot open shared object file: No such file or directory`)**
 
-   Don't forget to install device drivers for your platform. On Linux, you need to download and install the peak-linux-driver (http://www.peak-system.com/fileadmin/media/linux/index.htm) and PCAN-Basic API (http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Basic_API_for_Linux/PCAN_Basic_Linux-4.2.0.tar.gz).
+   Don't forget to install device drivers for your CAN interface device on your platform. For this particular issue on Linux (missing libpcanbasic.so), you need to download and install the peak-linux-driver (http://www.peak-system.com/fileadmin/media/linux/index.htm) and PCAN-Basic API (http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Basic_API_for_Linux/PCAN_Basic_Linux-4.2.0.tar.gz).
+   
+   However, there are many other interface devices supported by Python-CAN: http://python-can.readthedocs.io/en/latest/interfaces.html. Ensure your CAN interface drivers are installed properly.
    
 **2. Import can problem. `ModuleNotFoundError: No module named 'can'`**
 
