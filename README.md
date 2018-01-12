@@ -43,3 +43,7 @@ Setup:
 For help use:
 
 `$> python fuzzer.py --help`
+
+Common Issues
+  1. `OSError: libpcanbasic.so: cannot open shared object file: No such file or directory`
+    Don't forget to install device drivers for your platform. On Linux, you need to download and install the peak-linux-driver (http://www.peak-system.com/fileadmin/media/linux/index.htm) and PCAN-Basic API (http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Basic_API_for_Linux/PCAN_Basic_Linux-4.2.0.tar.gz)
