@@ -305,7 +305,11 @@ def main():
     print("canid: {}".format(canid))
     print("data: {}".format(data))
     print("rate: {}".format(rate))
-    fuzzID(canid, data, rate)
+    try:
+        fuzzID(canid, data, rate)
+    except KeyboardInterrupt: #Detect Ctrl-C and exit cleanly
+        theBus.shutdown()
+        print("Goodbye!")
 
 if __name__ == "__main__":
     main()
